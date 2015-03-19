@@ -1,0 +1,13 @@
+# tarballs
+*.tgz
+
+# backup files
+*.bak
+
+# temporary files
+*.swp
+*.tmp
+_*
+
+# linked files & directories
+

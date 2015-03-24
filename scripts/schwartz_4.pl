@@ -32,8 +32,10 @@ sub sortkey {
 my @test = qw( this is a test. This Is A Test. );
 say vardump presort => \@test;
 
-my @final = map { $_->[0] }
-            sort { $a->[1] cmp $b->[1] }
-            map { [ $_, sortkey( $_ ) ] }
-            @test;
+my @sorted_pairs = sort { $a->[1] cmp $b->[1] }
+                   map { [ $_, sortkey( $_ ) ] }
+                   @test;
+say vardump sorted_pairs => \@sorted_pairs;
+
+my @final = map { $_->[0] } @sorted_pairs;
 say vardump final => \@final;

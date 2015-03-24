@@ -17,25 +17,16 @@ use constant DEBUG => $ENV{DEBUG};
 
 # --------------------------------------
 
-my $SortKeySeparator = q{ };
-
-sub sortkey {
-  my $orig = shift @_;
-  my $key1 = lc( $orig );
-
-  my $stringified_key = join( $SortKeySeparator, $key1, $orig );
-  say vardump original => $orig, stringified_key => $stringified_key;
-
-  return $stringified_key;
-}
-
 my @test = qw( this is a test. This Is A Test. );
 say vardump presort => \@test;
 
-my @pairs = map { [ $_, sortkey( $_ ) ] } @test;
+my @pairs = map { [$_,lc($_)] } @test;
 say vardump pairs => \@pairs;
 
-my @sorted_pairs = sort { $a->[1] cmp $b->[1] } @pairs;
+my @sorted_pairs = sort { $a->[1] cmp $b->[1]
+                                  ||
+                          $a->[0] cmp $b->[0]
+                        } @pairs;
 say vardump sorted_pairs => \@sorted_pairs;
 
 my @final = map { $_->[0] } @sorted_pairs;

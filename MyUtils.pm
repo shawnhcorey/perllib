@@ -51,10 +51,13 @@ our $VERSION = v1.0.0;
 use base qw( Exporter );
 our @EXPORT = qw( );
 our @EXPORT_OK = qw(
-    trim
-    vardump
+    fheader
+    fmigrate
+    ftmps
     out_of_date
     touch
+    trim
+    vardump
 );
 our %EXPORT_TAGS = (
   all  => [ @EXPORT, @EXPORT_OK ],
@@ -65,12 +68,14 @@ our %EXPORT_TAGS = (
 
 # Standard modules
 use Carp;
-use English      qw( -no_match_vars ) ;  # Avoids regex performance penalty
-use File::Glob   qw( :bsd_glob );
+use English         qw( -no_match_vars ) ;  # Avoids regex performance penalty
+use File::Basename;
+use File::Copy;
+use File::Glob      qw( :bsd_glob );
 use List::Util;
 use POSIX;
 use Scalar::Util;
-use Storable      qw( dclone );
+use Storable        qw( dclone );
 
 # CPAN modules
 use List::MoreUtils;
@@ -290,6 +295,142 @@ sub out_of_date {
 
   } # end sub touch
 } # end isolation block
+
+# --------------------------------------
+#       Name: schwartzian
+#      Usage: @sorted = schwartzian( \&sortkey, @unsorted );
+#    Purpose: Sort using the Schwartzian Transform.
+# Parameters: \&sortkey -- CODE ref that returns the sort-key string for each item
+#             @unsorted -- list of items to sort
+#    Returns:   @sorted -- sorted list of items
+#
+sub schwartzian {
+  my $sortkey  = shift @_;
+  my @unsorted = @_;
+
+  return map { $_->[0] }
+         sort { $a->[1] cmp $b->[1] }
+         map { [ $_, $sortkey->($_) ] }
+         @unsorted;
+}
+
+# --------------------------------------
+#       Name: ftmps
+#      Usage: @file_names = ftmps( ?%options, $root, @exts );
+#    Purpose: Create file names from root with extensions.
+# Parameters:   ?%options -- optional hash ref of options
+#                   $root -- file root name
+#                   @exts -- list of extension to append
+#    Returns: @file_names -- root name with new extensions
+#
+
+# create a block to limit scoping
+{
+  my %default_options = (
+    prefix  => q{},  # prefix text for basename
+    postfix => q{},  # postfix text for basename
+  );
+
+  sub ftmps {
+
+    # Start with defaults
+    my %options = %default_options;
+
+    # look for developer's options
+    if( ref( $_[0] ) && ref( $_[0] ) eq 'HASH' ){
+      my %given_options = %{ shift @_ };
+
+      # use a slice to copy
+      @options{ keys %given_options } = values %given_options;
+
+    } # end if
+
+    my $root       = shift @_;
+    my @exts       = @_;
+    my @file_names = ();
+
+    my $dir  = dirname(  $root );
+    my $base = basename( $root );
+
+    # remove existing extension
+    $base =~ s{ \. [^\.]+ \z }{}msx;
+    $base = $options{prefix} . $base . $options{postfix};
+
+    # add new extensions
+    for my $ext ( @exts ){
+      push @file_names, "$dir/$base.$ext";
+    }
+
+    return @file_names;
+  }
+}
+
+# --------------------------------------
+#       Name: fheader
+#      Usage: $hdr = fheader( $title; $purpose );
+#    Purpose: Create a header string for a file
+# Parameters:   $title -- title of file
+#             $purpose -- it's purpose
+#    Returns:     $hdr -- multi-line text
+#
+
+# create a block to limit scoping
+{
+  my %default_options = (
+    start => q{#},
+    end   => q{#},
+    bol   => q{# },
+  );
+
+  sub fheader {
+
+    # Start with defaults
+    my %options = %default_options;
+
+    # look for developer's options
+    if( ref( $_[0] ) && ref( $_[0] ) eq 'HASH' ){
+      my %given_options = %{ shift @_ };
+
+      # use a slice to copy
+      @options{ keys %given_options } = values %given_options;
+
+    } # end if
+
+    my $title   = shift @_;
+    my $purpose = shift @_ || 'TBD';
+    my $date    = strftime( '%Y.%m.%d', localtime );
+
+  return <<"EOD"
+$options{start}
+$options{bol}Title   : $title
+$options{bol}Created : $date
+$options{bol}Purpose : $purpose
+$options{bol}
+$options{bol}--------------------------------------
+$options{end}
+EOD
+  }
+}
+
+# --------------------------------------
+#       Name: fmigrate
+#      Usage: fmigrate( @migration_chain );
+#    Purpose: Migrate the file thru the chain
+# Parameters: @migration_chain -- TBD
+#    Returns: (none)
+#
+sub fmigrate {
+
+  my $dst = pop @_;
+
+  while( @_ ){
+    my $src = pop @_;
+    move( $src, $dst ) or croak "could not migrate $src to $dst : $OS_ERROR";
+    $dst = $src;
+  }
+
+  return;
+}
 
 
 1;

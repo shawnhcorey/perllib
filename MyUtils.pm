@@ -55,6 +55,7 @@ our @EXPORT_OK = qw(
     fmigrate
     ftmps
     out_of_date
+    schwartzian
     touch
     trim
     vardump
@@ -416,7 +417,7 @@ EOD
 #       Name: fmigrate
 #      Usage: fmigrate( @migration_chain );
 #    Purpose: Migrate the file thru the chain
-# Parameters: @migration_chain -- TBD
+# Parameters: @migration_chain -- list of files
 #    Returns: (none)
 #
 sub fmigrate {
